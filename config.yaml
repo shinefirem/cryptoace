@@ -1,0 +1,68 @@
+# CryptoAce 核心配置檔案
+# 此檔案包含系統的所有核心參數設定
+
+# 1. 交易所與市場設定
+exchange:
+  name: 'bitget'                    # 交易所名稱 (支援 bitget, binance 等)
+  default_symbol: 'BTC/USDT'        # 預設交易對
+  perpetual_contract: true          # 是否使用永續合約
+  fee:                              # 手續費設定
+    taker: 0.0006                   # 吃單手續費 (0.06%)
+    maker: 0.0002                   # 掛單手續費 (0.02%)
+
+# 2. 數據與特徵設定
+data:
+  timeframe: '5m'                   # K線時間週期 (1m, 5m, 15m, 1h, 4h, 1d)
+  start_date: '2023-01-01T00:00:00Z' # 數據開始時間 (ISO 8601 格式)
+  raw_data_path: './data/raw/'      # 原始數據存放路徑
+  feature_data_path: './data/features/' # 特徵數據存放路徑
+  feature_engine:                   # 特徵工程參數
+    vwap_window: 20                 # VWAP 計算視窗期間
+    atr_window: 14                  # ATR (平均真實範圍) 計算期間
+
+# 3. 交易環境與風險管理設定
+trading_env:
+  initial_balance: 10000.0          # 初始資金 (USDT)
+  leverage: 10                      # 槓桿倍數
+  slippage:                         # 滑點設定
+    base: 0.0001                    # 基礎滑點 (0.01%)
+    factor: 0.000001                # 滑點因子 (根據訂單大小調整)
+  reward_function:                  # 獎勵函數參數
+    a_log_return_coeff: 1.0         # 對數收益係數
+    b_sortino_coeff: -0.1           # Sortino 比率係數 (懲罰下行風險)
+    sortino_window: 100             # Sortino 計算視窗期間
+  risk_management:                  # 風險管理設定
+    max_position_change_per_step: 0.5  # 每步最大倉位變化 (50%)
+    max_drawdown_limit: 0.20        # 最大回撤限制 (20%)
+
+# 4. 模型與訓練設定
+agent:
+  model_type: 'PPO_Transformer'     # 模型類型 (PPO + Transformer)
+  model_path: './models/'           # 模型儲存路徑
+  random_seed: 42                   # 隨機種子 (確保結果可重現)
+  transformer:                      # Transformer 架構參數
+    n_layers: 4                     # Transformer 層數
+    n_heads: 4                      # 多頭注意力機制的頭數
+    dropout: 0.1                    # Dropout 比率 (防止過擬合)
+  ppo:                              # PPO 演算法參數
+    learning_rate: 0.0003           # 學習率
+    n_steps: 2048                   # 每次更新收集的步數
+    batch_size: 64                  # 批次大小
+    n_epochs: 10                    # 每次更新的訓練週期數
+    gamma: 0.99                     # 折扣因子 (未來獎勵的重要性)
+    gae_lambda: 0.95                # GAE (廣義優勢估計) 參數
+    clip_range: 0.2                 # PPO 剪裁範圍
+    entropy_coeff_start: 0.01       # 熵係數初始值 (鼓勵探索)
+    entropy_coeff_end: 0.001        # 熵係數最終值
+    entropy_annealing_duration: 0.8 # 熵係數衰減持續時間比例
+
+# 5. 實時交易設定
+livetrader:
+  paper_mode: true                  # 是否為模擬交易模式 (true: 模擬, false: 實盤)
+
+# 6. 日誌設定
+logger:
+  log_path: './logs/cryptoace.log'  # 日誌檔案路徑
+  level: 'INFO'                     # 日誌等級 (DEBUG, INFO, WARNING, ERROR)
+  rotation: '10 MB'                 # 日誌檔案輪轉大小
+  retention: '7 days'               # 日誌檔案保留時間

@@ -1,0 +1,24 @@
+# 核心依賴
+numpy==1.26.4
+pandas==2.2.2
+PyYAML==6.0.1
+
+# 機器學習/深度學習
+torch==2.3.1
+stable-baselines3==2.3.2
+gymnasium==0.29.1
+scikit-learn==1.5.1
+
+# 數據處理與分析
+ccxt==4.3.41
+pandas_ta==0.3.14b0
+pyarrow==16.1.0
+matplotlib==3.9.0
+
+# 工具函式庫
+loguru==0.7.2
+python-dotenv==1.0.1
+joblib==1.4.2
+
+# 開發與測試工具
+pytest==8.2.2
