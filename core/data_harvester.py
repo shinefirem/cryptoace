@@ -348,6 +348,52 @@ class DataHarvester:
         except Exception as e:
             self.logger.error(f"數據收集流程失敗: {e}")
             raise
+    
+    def get_full_dataset(self) -> pd.DataFrame:
+        """
+        獲取完整的數據集
+        
+        Returns:
+            包含所有原始數據的 DataFrame
+        """
+        all_files = list(self.raw_data_path.glob("*.parquet"))
+        if not all_files:
+            self.logger.warning("未找到任何原始數據文件")
+            return pd.DataFrame()
+        
+        # 合併所有文件中的數據
+        data_frames = [pd.read_parquet(file) for file in all_files]
+        full_dataset = pd.concat(data_frames, ignore_index=True)
+        self.logger.info(f"成功加載完整數據集，共 {len(full_dataset)} 條記錄")
+        return full_dataset
+    
+    def get_data_slice(self, start_idx: int, end_idx: int) -> pd.DataFrame:
+        """
+        根據索引範圍獲取數據片段
+        
+        Args:
+            start_idx: 開始索引
+            end_idx: 結束索引
+            
+        Returns:
+            指定範圍的數據片段
+        """
+        full_dataset = self.get_full_dataset()
+        if full_dataset.empty:
+            self.logger.warning("無法獲取數據片段：完整數據集為空")
+            return pd.DataFrame()
+        
+        # 確保索引範圍有效
+        start_idx = max(0, start_idx)
+        end_idx = min(len(full_dataset), end_idx)
+        
+        if start_idx >= end_idx:
+            self.logger.warning(f"無效的索引範圍: [{start_idx}:{end_idx}]")
+            return pd.DataFrame()
+        
+        data_slice = full_dataset.iloc[start_idx:end_idx].copy()
+        self.logger.info(f"獲取數據片段 [{start_idx}:{end_idx}]，共 {len(data_slice)} 條記錄")
+        return data_slice
 
 
 if __name__ == "__main__":

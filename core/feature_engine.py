@@ -163,9 +163,16 @@ class FeatureEngine:
             obv_period = self.feature_config['obv_period']
             features[f'obv_sma_{obv_period}'] = ta.sma(features['obv'], length=obv_period)
             
-            # 9. VWAP (成交量加權平均價格)
+            # 9. VWAP (成交量加權平均價格) - 手動計算避免索引問題
             vwap_period = self.feature_config['vwap_period']
-            features[f'vwap_{vwap_period}'] = ta.vwap(features['high'], features['low'], features['close'], features['volume'], length=vwap_period)
+            
+            # 手動計算 VWAP
+            typical_price = (features['high'] + features['low'] + features['close']) / 3
+            volume_price = typical_price * features['volume']
+            features[f'vwap_{vwap_period}'] = (
+                volume_price.rolling(window=vwap_period).sum() / 
+                features['volume'].rolling(window=vwap_period).sum()
+            )
             features[f'vwap_{vwap_period}_ratio'] = features['close'] / features[f'vwap_{vwap_period}']
             
             # 10. 波動率特徵

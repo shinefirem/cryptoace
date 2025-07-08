@@ -116,6 +116,16 @@ class Configurator:
         """
         return self._config.get('logger', {})
     
+    @property
+    def training(self) -> Dict[str, Any]:
+        """
+        獲取訓練配置
+        
+        Returns:
+            訓練相關配置字典
+        """
+        return self._config.get('training', {})
+    
     def get(self, key: str, default: Any = None) -> Any:
         """
         獲取配置值
