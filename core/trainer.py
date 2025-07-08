@@ -404,7 +404,11 @@ class Trainer:
             
             # 創建臨時環境用於初始化代理
             dummy_data = pd.DataFrame({
+                'open': [1.0] * 100,
+                'high': [1.1] * 100,
+                'low': [0.9] * 100,
                 'close': [1.0] * 100,
+                'volume': [100.0] * 100,
                 'feature_0': [0.0] * 100
             })
             temp_env = self._create_trading_environment(dummy_data)
