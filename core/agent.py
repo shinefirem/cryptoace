@@ -292,7 +292,7 @@ class Agent(IAgent):
                 "n_layers": self.n_layers,
                 "dropout": self.dropout
             },
-            "net_arch": [dict(pi=[256, 256], vf=[256, 256])],  # 策略和價值網路架構
+            "net_arch": {"pi": [256, 256], "vf": [256, 256]},  # 策略和價值網路架構
             "activation_fn": torch.nn.ReLU,
         }
         
