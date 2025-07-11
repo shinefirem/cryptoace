@@ -77,6 +77,16 @@ class Configurator:
         return self._config.get('data', {})
     
     @property
+    def trading(self) -> Dict[str, Any]:
+        """
+        獲取交易配置
+        
+        Returns:
+            交易相關配置字典
+        """
+        return self._config.get('trading', {})
+    
+    @property
     def trading_env(self) -> Dict[str, Any]:
         """
         獲取交易環境配置
