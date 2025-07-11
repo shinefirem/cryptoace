@@ -42,6 +42,8 @@ def create_argument_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 使用範例:
+  %(prog)s collect                                    # 收集歷史數據
+  %(prog)s collect --symbol BTC/USDT --limit 20000   # 收集指定交易對的更多數據
   %(prog)s train                                      # 開始模型訓練 (使用增強預設參數)
   %(prog)s train --window-size 5000                   # 使用更大的訓練窗口
   %(prog)s train --timesteps 50000 --walk-steps 80    # 使用更多訓練步數和滾動窗口
@@ -178,6 +180,35 @@ def create_argument_parser() -> argparse.ArgumentParser:
         default='live_trader_state.json',
         metavar='FILE',
         help='狀態持久化檔案路徑 (預設: live_trader_state.json)'
+    )
+    
+    # 數據收集子命令
+    collect_parser = subparsers.add_parser(
+        'collect',
+        help='收集歷史市場數據',
+        description='從交易所收集歷史K線數據用於訓練'
+    )
+    
+    collect_parser.add_argument(
+        '--symbol',
+        type=str,
+        default='BTC/USDT',
+        help='交易對符號 (預設: BTC/USDT)'
+    )
+    
+    collect_parser.add_argument(
+        '--timeframe',
+        type=str,
+        default='5m',
+        choices=['1m', '5m', '15m', '1h', '4h', '1d'],
+        help='K線時間週期 (預設: 5m)'
+    )
+    
+    collect_parser.add_argument(
+        '--limit',
+        type=int,
+        default=10000,
+        help='收集數據筆數 (預設: 10000)'
     )
     
     return parser
@@ -361,6 +392,111 @@ def handle_backtest_command(args: argparse.Namespace, configurator: Configurator
         sys.exit(1)
 
 
+def handle_collect_command(args: argparse.Namespace, configurator: Configurator, logger) -> None:
+    """
+    處理數據收集命令
+    
+    Args:
+        args: 命令行參數
+        configurator: 配置管理器
+        logger: 日誌記錄器
+    """
+    try:
+        logger.info("📥 開始收集歷史市場數據")
+        
+        # 動態更新配置 - 設定更早的開始時間來獲取更多數據
+        if not hasattr(configurator, '_config'):
+            configurator._config = {}
+        if 'data' not in configurator._config:
+            configurator._config['data'] = {}
+        if 'exchange' not in configurator._config:
+            configurator._config['exchange'] = {}
+        
+        # 更新數據收集參數
+        configurator._config['exchange']['default_symbol'] = args.symbol
+        configurator._config['data']['timeframe'] = args.timeframe
+        
+        # 根據需要的數據量調整開始時間
+        import datetime
+        from datetime import timedelta
+        
+        # 計算需要多久的歷史數據
+        if timeframe := args.timeframe:
+            if timeframe == '1m':
+                time_delta = timedelta(minutes=args.limit)
+            elif timeframe == '5m':
+                time_delta = timedelta(minutes=args.limit * 5)
+            elif timeframe == '15m':
+                time_delta = timedelta(minutes=args.limit * 15)
+            elif timeframe == '1h':
+                time_delta = timedelta(hours=args.limit)
+            elif timeframe == '4h':
+                time_delta = timedelta(hours=args.limit * 4)
+            elif timeframe == '1d':
+                time_delta = timedelta(days=args.limit)
+            else:
+                time_delta = timedelta(minutes=args.limit * 5)  # 預設5分鐘
+        
+        # 設定更早的開始時間
+        end_time = datetime.datetime.now()
+        start_time = end_time - time_delta
+        new_start_date = start_time.strftime('%Y-%m-%dT%H:%M:%SZ')
+        
+        configurator._config['data']['start_date'] = new_start_date
+        
+        logger.info(f"交易對: {args.symbol}")
+        logger.info(f"時間週期: {args.timeframe}")
+        logger.info(f"目標收集筆數: {args.limit}")
+        logger.info(f"調整開始時間為: {new_start_date}")
+        
+        # 創建數據收集器並執行標準收集流程
+        from core.data_harvester import DataHarvester
+        data_harvester = DataHarvester(configurator, logger)
+        
+        logger.info("🔄 開始從交易所收集數據...")
+        
+        # 使用標準的 run_collection 方法，但使用調整後的配置
+        data_harvester.run_collection()
+        
+        # 檢查收集結果
+        dataset = data_harvester.get_full_dataset()
+        logger.info(f"✅ 數據收集完成，共收集 {len(dataset)} 條記錄")
+        
+        # 顯示數據範圍
+        if len(dataset) > 0:
+            # 由於 get_full_dataset 可能返回的是處理後的數據，我們讀取原始保存的文件
+            try:
+                import pandas as pd
+                symbol_safe = args.symbol.replace('/', '_')
+                raw_filepath = data_harvester.raw_data_path / f"{symbol_safe}_{args.timeframe}_raw.parquet"
+                
+                if raw_filepath.exists():
+                    raw_df = pd.read_parquet(raw_filepath)
+                    start_time = raw_df.index[0]
+                    end_time = raw_df.index[-1]
+                    logger.info(f"📅 數據時間範圍: {start_time} 至 {end_time}")
+                    logger.info(f"📊 原始數據: {len(raw_df)} 條記錄")
+                    logger.info(f"📊 數據列: {list(raw_df.columns)}")
+                    
+                    # 檢查特徵數據
+                    features_filepath = data_harvester.feature_data_path / f"{symbol_safe}_{args.timeframe}_features.parquet"
+                    if features_filepath.exists():
+                        features_df = pd.read_parquet(features_filepath)
+                        logger.info(f"🔧 特徵數據: {len(features_df)} 條記錄，{features_df.shape[1]} 個特徵")
+                    
+            except Exception as e:
+                logger.warning(f"讀取保存的數據文件時出錯: {e}")
+                logger.info(f"📊 基本統計: {len(dataset)} 條記錄")
+        else:
+            logger.warning("⚠️ 未收集到任何數據，請檢查交易對和時間設定")
+        
+    except Exception as e:
+        logger.error(f"❌ 數據收集失敗: {e}")
+        import traceback
+        logger.error(f"錯誤詳情: {traceback.format_exc()}")
+        sys.exit(1)
+
+
 def handle_live_command(args: argparse.Namespace, configurator: Configurator, logger) -> None:
     """
     處理實時交易命令
@@ -436,6 +572,9 @@ def main() -> None:
         
         elif args.command == 'live':
             handle_live_command(args, configurator, logger)
+        
+        elif args.command == 'collect':
+            handle_collect_command(args, configurator, logger)
         
         else:
             logger.error(f"❌ 不支援的命令: {args.command}")

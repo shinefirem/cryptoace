@@ -13,9 +13,11 @@ exchange:
 # 2. 數據與特徵設定
 data:
   timeframe: '5m'                   # K線時間週期 (1m, 5m, 15m, 1h, 4h, 1d)
-  start_date: '2023-01-01T00:00:00Z' # 數據開始時間 (ISO 8601 格式)
+  start_date: '2022-01-01T00:00:00Z' # 數據開始時間 (更早的日期)
+  end_date: '2024-12-31T23:59:59Z'   # 數據結束時間
   raw_data_path: './data/raw/'      # 原始數據存放路徑
   feature_data_path: './data/features/' # 特徵數據存放路徑
+  max_records: 50000                # 最大記錄數量
   feature_engine:                   # 特徵工程參數
     vwap_window: 20                 # VWAP 計算視窗期間
     atr_window: 14                  # ATR (平均真實範圍) 計算期間
